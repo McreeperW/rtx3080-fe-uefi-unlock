@@ -1,6 +1,6 @@
 # RTX 3080 FE Stage 21 — USB 부팅 튜토리얼 (한국어)
 
-> **연구용/고위험, 범용 설치기가 아닙니다.** 이 문서는 검증된 1대의 PC 구성과 **이미 정확한 펌웨어 자산 및 검증 바이너리를 확보한 경우**의 USB 제작 흐름을 설명합니다. GPU DMA, NVIDIA FWSEC·SEC2/GSP 실행, PCIe FLR 때문에 검은 화면, 시스템 정지, 강제 전원 차단 및 데이터 손실이 발생할 수 있습니다. UEFI/Windows 복구가 보장되지 않습니다. 다른 CPU·메인보드·GPU는 아래 명령을 그대로 실행하지 마세요.
+> **연구용/고위험, 범용 설치기가 아닙니다.** 이 문서는 검증된 1대의 PC 구성과 **정확한 펌웨어 자산 및 검증 바이너리를 확보한 경우**의 USB 제작 흐름을 설명합니다. GPU DMA, NVIDIA FWSEC·SEC2/GSP 실행, PCIe FLR 때문에 검은 화면, 시스템 정지, 강제 전원 차단 및 데이터 손실이 발생할 수 있습니다. UEFI/Windows 복구가 보장되지 않습니다. 다른 CPU·메인보드·GPU는 아래 명령을 그대로 실행하지 마세요.
 
 **빠른 이동:** [준비물](#1-준비물) · [소스 빌드](#2-3개-efi를-한-번에-빌드) · [펌웨어 ASSETS](#3-펌웨어-assets-5개-준비) · [USB 제작](#4-fat32-usb-제작) · [부팅](#5-usb로-1회-부팅) · [결과 확인](#6-windows-로그와-성능-확인) · [실패·복구](#7-실패했을-때--재시도-주의)
 
@@ -23,7 +23,7 @@
 - **FAT32 USB** 1개(1 GiB 이상 권장). 중요한 파일은 백업하고, **Windows OS가 설치된 디스크의 EFI 시스템 파티션(ESP)은 절대 작업 대상으로 삼지 않습니다**.
 - Windows 10/11 UEFI 부팅 PC + WSL2/Linux(예: Ubuntu). `git`, `clang`, `lld-link`, `python3`, C 컴파일러(`cc`), `sha256sum`, `unzip`.
 - 본 저장소의 Stage 15·20·21 **전체 소스와 포함된 `deps/edk2/MdePkg` 헤더**.
-- **NVIDIA 610.43.03 기반 ASSETS 5개**. 이 저장소는 원본/파생 NVIDIA 펌웨어 바이너리를 제공하지 않고, 검증된 신규 추출기를 제공하지도 않습니다. [ASSETS 상세 문서](ASSETS_GUIDE_KO.md) 확인.
+- **NVIDIA 610.43.03 기반 ASSETS 5개**. 이 저장소는 NVIDIA 펌웨어 바이너리를 제공하지 않습니다. 별도 `gpu-unlock`의 `make assets`로 생성 후 검증해야 합니다. [ASSETS 상세 문서](ASSETS_GUIDE_KO.md) 확인.
 - 세 EFI 파일을 **성공 실험과 동일한 SHA-256**으로 확보한 상태. Stage 21은 일부 `__FILE__` 진단 문자열에 컴파일 당시 절대 경로가 포함되어 **다른 경로에서 빌드하면 해시가 달라질 수 있습니다**. 동일한 소스라는 이유만으로 실행 검증된 파일이 되지 않습니다.
 - 문제가 생겼을 때 USB를 제거하고 기존 Windows로 돌아갈 복구 수단. BitLocker 사용 시 복구 키·UEFI 설정 변경 영향을 미리 확인하세요.
 
@@ -58,30 +58,21 @@ fe/stage21/out/RTX3080-STAGE19-ENGINE.EFI
 
 ## 3. 펌웨어 ASSETS 5개 준비
 
-정확히 다음 다섯 파일이 필요합니다. `gsp_ga10x.bin`만 있거나, Windows 드라이버에 포함된 이름이 비슷한 파일로 대체해서는 안 됩니다.
-
-| 파일명 | 크기 (바이트) | SHA-256 |
-|---|---:|---|
-| `booter_load_ga102.bin` | 61,256 | `056cbc064a888f80717726c54d7f64fcd68044d123870c95a74f37f4975dcaa4` |
-| `v67-ga102-610.43.03.bin` | 64,000 | `2a0aa1f86d0b6afff5214d641d87d46dc98ef06ed908ff05d0ddbad5ffb7e197` |
-| `gsp_ga10x.bin` | 84,277,400 | `572373620a37418f24dc16b5031c39338778c3257e48e8408de9a57291b24f3a` |
-| `gsp_boot_ga102.bin` | 24,576 | `3df651acb174fd5f5561a1996965b192f50c5d763168446ed0d4ead19d895768` |
-| `gsp_boot_desc_ga102.bin` | 84 | `cc5a3fc1f4c47f2fe107b1b68f0176d8a448e6dec84b575e5560ccef5262bf15` |
-
-자산은 본인이 합법적으로 확보한 파일이어야 합니다. 원본 NVIDIA 드라이버의 어떤 파일을 어떻게 가공했는지에 관한 **끝까지 검증된 공개 생성 절차는 아직 없습니다**. 5개 자산이 없다면 GPU 실행 단계로 넘어가지 마세요.
-
-파일을 `~/gpu-assets/`에 준비한 경우, 준비된 **빌드 EFI + 펌웨어**를 다음과 같이 사전 검사합니다.
+[Zagitta/gpu-unlock](https://github.com/Zagitta/gpu-unlock)에서 NVIDIA **610.43.03** 입력으로 ASSETS 5개를 생성합니다.
 
 ```bash
-# 프로젝트 최상위 폴더에서
-python3 scripts/check-usb.py --built --assets-dir "$HOME/gpu-assets"
+# WSL/Linux: 첫 준비 시
+git clone https://github.com/Zagitta/gpu-unlock.git ~/gpu-unlock
+make -C ~/gpu-unlock assets
+
+# RTX 3080 FE 언락 저장소 루트에서 무결성 검사
+python3 scripts/verify-assets.py ~/.cache/gpu-unlock/assets
+python3 scripts/check-usb.py --built --assets-dir "$HOME/.cache/gpu-unlock/assets"
 ```
 
-**모든 EFI·ASSETS가 성공 기록의 해시와 일치해야 `PASS`**를 출력합니다. 파일이 없다면 먼저 확보해야 합니다. 준비된 3개 *검증 EFI*를 다른 폴더에 모았다면 대신 다음처럼 확인할 수 있습니다.
+생성 위치: `~/.cache/gpu-unlock/assets/`. `make assets` 내부에서 NVIDIA 입력 패키지를 받고 `generate_v67.py` 및 `extract_boot_assets.py`로 파일을 준비합니다. 검증에 사용할 5개 파일명과 **정확한 SHA-256**은 [ASSETS 가이드](ASSETS_GUIDE_KO.md)를 확인하세요.
 
-```bash
-python3 scripts/check-usb.py --efi-dir "$HOME/verified-efi" --assets-dir "$HOME/gpu-assets"
-```
+**해시가 일치하지 않으면 USB 실행을 준비하지 마세요.** `make assets`를 실행했다는 사실만으로 Stage 21 성공 당시와 같은 바이너리가 만들어졌다고 단정할 수 없습니다. 생성된 NVIDIA 펌웨어를 GitHub에 직접 포함하지 않습니다.
 
 ## 4. FAT32 USB 제작
 
@@ -108,7 +99,7 @@ USB를 **빈 부팅용 USB로 새로 준비한 경우** 다음처럼 복사합�
   set -e
   USB=/mnt/f
   ROOT="$PWD"
-  ASSETS="$HOME/gpu-assets"  # 위 단계에서 전부 SHA-256 검증된 파일 5개
+  ASSETS="$HOME/.cache/gpu-unlock/assets"  # 위 단계에서 전부 SHA-256 검증된 파일 5개
 
   # 준비된 로컬 빌드 EFI와 펌웨어의 해시가 틀리면 중단
   python3 scripts/check-usb.py --built --assets-dir "$ASSETS"

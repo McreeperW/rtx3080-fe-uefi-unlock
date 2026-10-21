@@ -34,6 +34,16 @@ Windows 부팅 전 GPU 설정을 변경합니다. VBIOS 플래시는 하지 않�
 bash scripts/build-all.sh
 ```
 
+**ASSETS 5개 생성:**
+
+```bash
+git clone https://github.com/Zagitta/gpu-unlock.git ~/gpu-unlock
+make -C ~/gpu-unlock assets
+python3 scripts/verify-assets.py ~/.cache/gpu-unlock/assets
+```
+
+생성된 5개 파일을 USB `RTX3080-UNLOCK/ASSETS/`에 복사. 해시 불일치 시 실행하지 마세요. [자세히](docs/ASSETS_GUIDE_KO.md).
+
 **USB 구성 (FAT32)**
 
 ```text

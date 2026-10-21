@@ -1,10 +1,10 @@
 # Stage 21용 NVIDIA 펌웨어 ASSETS 준비 및 검증
 
-> **상태: 필요 파일과 동일성 검사 방법은 확인됐지만, 신규 사용자를 위한 5개 자산의 추출·생성 절차는 아직 끝까지 재현·검증되지 않았습니다.** 이 문서는 설치 안내를 가장하지 않습니다. 다른 GPU나 보드에서 실행하면 화면 출력 중단·강제 전원 종료 등이 발생할 수 있습니다.
+> **상태:** 생성 명령은 이전 기록에서 확인됨. 새 생성물은 반드시 크기·SHA-256 검증.
 
 ## 1. 왜 Git 저장소에 없는가?
 
-이 프로젝트는 실제 NVIDIA 드라이버/펌웨어에서 준비한 바이너리와, 관련 파생 생성물을 사용합니다. 라이선스·저작권 문제가 있을 수 있으므로 Git 저장소와 릴리스에 자산 바이너리를 동봉하지 않습니다. **이 파일은 소스 코드만 빌드해서 자동으로 생기지 않습니다.**
+이 프로젝트는 실제 NVIDIA 드라이버/펌웨어에서 준비한 바이너리와, 관련 파생 생성물을 사용합니다. 라이선스·저작권 문제가 있을 수 있으므로 Git 저장소와 릴리스에 자산 바이너리를 동봉하지 않습니다. **이 파일은 본 저장소의 `build-all.sh`로 생성되지 않으며, 별도 `gpu-unlock`의 `make assets`로 준비합니다.**
 
 원래 Stage 12 실험에서 확인한 동일한 자산을 Stage 19/20/21에서 재사용했습니다. 해당 바이너리를 별도로 보유하지 않은 사용자가 저장소만 받아 설치 스크립트를 실행하면 실패하도록 설계됐습니다.
 
@@ -20,13 +20,28 @@
 
 이 목록의 단일 원본은 [`unlock/assets.json`](../unlock/assets.json)입니다. Stage 21 설치 스크립트 [`fe/stage21/install-once.sh`](../fe/stage21/install-once.sh)도 파일명·크기·해시를 확인합니다.
 
-## 3. 원본 후보와 중요한 제약
+## 3. ASSETS 생성 — 이전 실험 기록
 
-- `gsp_ga10x.bin`: 테스트에서 사용한 파일은 **NVIDIA 610.43.03 계열 GSP 펌웨어**입니다. 시스템에 설치된 현재 Windows NVIDIA 610.88 드라이버가 동일한 펌웨어 파일을 제공한다고 **가정하면 안 됩니다**. 정확한 바이트 크기와 SHA-256이 같아야 합니다.
-- `booter_load_ga102.bin`, `gsp_boot_ga102.bin`, `gsp_boot_desc_ga102.bin`: NVIDIA 드라이버/펌웨어 입력을 가공·추출하여 얻는 유형의 자산입니다. **공식 드라이버 배포 파일에서 해당 이름 그대로 발견된다는 뜻이 아닙니다**. 이 저장소에는 실험 당시의 추출 명령과 전체 재현 기록이 없습니다.
-- `v67-ga102-610.43.03.bin`: GPU 언락에 사용하는 **V67 생성 페이로드**이며, 일반 NVIDIA 드라이버 설치 폴더에 같은 이름으로 포함된다고 가정하면 안 됩니다. 생성 버전과 크기·해시를 반드시 맞춰야 합니다.
+2026-10-20 작업에서 [`Zagitta/gpu-unlock`](https://github.com/Zagitta/gpu-unlock)의 `Makefile`을 사용했습니다. 원본 입력 버전은 **610.43.03**입니다.
 
-기술적 참고 자료: [Zagitta/gpu-unlock](https://github.com/Zagitta/gpu-unlock)의 `firmware/` 소스 및 당시 출처 기록을 확인하세요. 해당 Linux용 프로젝트의 최신 산출물을 가져온다고 이 Windows UEFI Stage 21의 정확한 5개 SHA-256과 일치한다는 **보장은 없습니다**. 이 저장소에는 Windows Stage 21용으로 검증된, 5개 파일 자동 다운로드·추출 스크립트가 없습니다. 잘못된 바이너리를 이름만 맞춰 넣거나 해시 검사를 무시하지 마세요.
+```bash
+# WSL/Linux; 첫 실행 시
+git clone https://github.com/Zagitta/gpu-unlock.git ~/gpu-unlock
+make -C ~/gpu-unlock assets
+
+# RTX 3080 FE 언락 저장소 루트에서 실행
+python3 scripts/verify-assets.py ~/.cache/gpu-unlock/assets
+```
+
+`make assets`는 해당 저장소에서 다음 작업을 연결합니다.
+
+- `firmware/fetch_artifacts.py`: `NVIDIA-kernel-module-source-610.43.03.tar.xz`, `nvidia-utils-610.43.03-1-x86_64_v3.pkg.tar.zst` 다운로드 및 입력 해시 확인
+- `firmware/generate_v67.py`: `v67-ga102-610.43.03.bin` 생성
+- `firmware/extract_boot_assets.py`: `booter_load_ga102.bin`, `gsp_ga10x.bin`, `gsp_boot_ga102.bin`, `gsp_boot_desc_ga102.bin` 추출
+
+기본 출력은 `~/.cache/gpu-unlock/assets/`입니다. 위 생성 명령은 **ASSETS만 준비**하며 USB·GPU는 변경하지 않습니다.
+
+**중요:** 과거 `Makefile` 경로는 확인했지만, 현재 upstream 소스로 재생성한 5개 파일이 당시 성공한 SHA-256과 같은지는 별도 확인하지 않았습니다. 최신 upstream에서 빌드 내용이 달라졌다면 `verify-assets.py` 검사를 통과하지 못할 수 있습니다. 파일명 변경이나 해시 검사 우회는 하지 마세요.
 
 ## 4. 파일 배치
 
@@ -64,6 +79,9 @@ Stage 21 구성은 `Stage15 BOOTX64.EFI` + `Stage20 RTX3080-UNLOCK.EFI` + `Stage
 
 특히 `docs/USB-BOOT.md`는 **과거 Stage 12의 별도 구성**(내장 GPU 사용 및 대화형 UEFI)을 설명하며, 검증된 Stage 21의 Ryzen 5 3600 단독 GPU 부팅 절차와 다릅니다. 이를 Stage 21 설치법으로 사용하지 마세요.
 
-## 6. 재현 기여가 필요한 부분
+## 6. 생성·검증 범위
 
-각 파일의 원본 NVIDIA 배포물 버전과 SHA-256, 추출/생성 스크립트, 도구 버전, 생성 파일의 상기 SHA-256 일치를 확인하는 공개 재현 기록이 아직 필요합니다. 그 과정이 끝나기 전에는 타인에게 '클론 후 실행 가능' 또는 '범용 AM4 지원'이라고 안내하지 마세요. 사용자가 소유·이용 허가를 받지 않은 NVIDIA 바이너리를 저장소나 이슈에 올리지 마세요.
+- **확인됨:** 기존 `gpu-unlock` `Makefile`에서 `make assets` → NVIDIA 입력 다운로드 → V67 생성·부팅 자산 추출의 경로를 확인했습니다.
+- **실행 필요:** 새 환경에서 재생성한 파일의 크기·SHA-256이 위 5개와 완전히 같은지 검사해야 합니다.
+- **지원 범위:** 정확한 ASSETS 일치는 파일 동일성 검증일 뿐입니다. 다른 GPU·메인보드·CPU의 안전성이나 언락 성공을 보장하지 않습니다.
+- NVIDIA 펌웨어 바이너리를 GitHub에 업로드하지 마세요.
