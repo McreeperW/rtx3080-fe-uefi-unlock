@@ -10,21 +10,43 @@
     {
       "precision": "fp32_ieee",
       "before": 22.965,
+      "after": 22.756,
+      "percent_change": -0.91
+    },
+    {
+      "precision": "fp16_tensor",
+      "before": 62.924,
+      "after": 118.567,
+      "percent_change": 88.43
+    },
+    {
+      "precision": "bf16_tensor",
+      "before": 62.939,
+      "after": 120.699,
+      "percent_change": 91.77
+    }
+  ],
+  "method_notes": "User-provided benchmark.py CLI results; BEFORE stock, previous AFTER 1860 MHz undervolt, updated AFTER GPU clock/voltage not independently recorded. Original benchmark script not included. Workload-specific results.",
+  "measurement_conditions": {
+    "before": "언락 전 순정 상태 (사용자 보고)",
+    "after": "Stage 21 언락 후 재측정. 정확한 클럭/전압 정보는 미첨부.",
+    "previous_after": "이전 AFTER 실행에서는 GPU 1860 MHz 언더볼팅 적용 (사용자 보고)"
+  },
+  "previous_after_undervolt_1860mhz": [
+    {
+      "precision": "fp32_ieee",
       "after": 22.385,
       "percent_change": -2.53
     },
     {
       "precision": "fp16_tensor",
-      "before": 62.924,
       "after": 117.067,
       "percent_change": 86.05
     },
     {
       "precision": "bf16_tensor",
-      "before": 62.939,
       "after": 118.045,
       "percent_change": 87.55
     }
-  ],
-  "method_notes": "User-provided benchmark.py CLI results; original script not included in supplied materials. Results are workload-specific."
+  ]
 }
