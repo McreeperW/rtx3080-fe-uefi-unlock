@@ -1,0 +1,30 @@
+{
+  "measurement_date": "2026-10-22",
+  "gpu": "NVIDIA GeForce RTX 3080 Founders Edition",
+  "cpu": "AMD Ryzen 5 3600",
+  "driver": "610.88",
+  "workload": "4096x4096 matrix multiply",
+  "samples_per_run": 30,
+  "units": "TFLOPS",
+  "results": [
+    {
+      "precision": "fp32_ieee",
+      "before": 22.965,
+      "after": 22.385,
+      "percent_change": -2.53
+    },
+    {
+      "precision": "fp16_tensor",
+      "before": 62.924,
+      "after": 117.067,
+      "percent_change": 86.05
+    },
+    {
+      "precision": "bf16_tensor",
+      "before": 62.939,
+      "after": 118.045,
+      "percent_change": 87.55
+    }
+  ],
+  "method_notes": "User-provided benchmark.py CLI results; original script not included in supplied materials. Results are workload-specific."
+}
