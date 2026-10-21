@@ -1,5 +1,7 @@
-/* RTX 3080 FE Stage15: headless boot bridge with one-shot external module hook.
- * This bridge does no GPU writes; an external EFI module can be run exactly once.
+/* RTX 3080 FE Stage15: headless boot bridge with explicit one-shot or persistent-auto opt-in.
+ * AUTO mode places a durable attempt lock before starting the external child;
+ * a hang leaves the lock and prevents repeat GPU writes on the next USB boot.
+ * This bridge does no GPU writes; the child can modify the GPU.
  * Whether that module can operate safely is independent and NOT established here.
  * All UEFI calls are through the firmware's provided tables (no CRT imports).
  */
@@ -380,6 +382,80 @@ static EFI_STATUS take_one_shot_marker(EFI_HANDLE image){
   (void)root->Close(root);
   return rc;
 }
+/* Optional persistent USB auto-arm. Fail closed when the enable marker is malformed,
+ * a previous attempt lock remains, or file I/O cannot be durably flushed.
+ * EFI file Delete closes the handle; only these two project-owned marker files
+ * may be created/deleted by this code.
+ */
+static const CHAR16 AutoEnableName[]=L"\\RTX3080-STAGE15-AUTO.ON";
+static const CHAR16 AutoPendingName[]=L"\\RTX3080-STAGE15-AUTO.PENDING";
+static const CHAR8 AutoEnableToken[]="I_ACCEPT_REPEAT_GPU_HANG_RISK";
+static const CHAR8 AutoPendingToken[]="STAGE15_AUTO_ATTEMPT_IN_PROGRESS";
+
+static EFI_STATUS usb_root(EFI_HANDLE image,EFI_FILE_PROTOCOL **root){
+  EFI_LOADED_IMAGE_PROTOCOL *loaded=NULL;
+  EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *fs=NULL;
+  *root=NULL;
+  EFI_STATUS rc=ST->BootServices->HandleProtocol(image,&LoadedGuid,(VOID**)&loaded);
+  if(EFI_ERROR(rc)||!loaded)return EFI_UNSUPPORTED;
+  rc=ST->BootServices->HandleProtocol(loaded->DeviceHandle,&FsGuid,(VOID**)&fs);
+  if(EFI_ERROR(rc)||!fs)return EFI_UNSUPPORTED;
+  return fs->OpenVolume(fs,root);
+}
+static EFI_STATUS marker_exact(EFI_FILE_PROTOCOL *root,const CHAR16 *name,
+                               const CHAR8 *token,UINTN tokenlen){
+  EFI_FILE_PROTOCOL *file=NULL;
+  EFI_STATUS rc=root->Open(root,&file,(CHAR16*)name,EFI_FILE_MODE_READ,0);
+  if(EFI_ERROR(rc)||!file)return rc;
+  CHAR8 buf[64]={0};UINTN n=sizeof(buf);
+  if(tokenlen>=sizeof(buf)){(void)file->Close(file);return EFI_INVALID_PARAMETER;}
+  rc=file->Read(file,&n,buf);
+  if(!EFI_ERROR(rc)){
+    if(n!=tokenlen)rc=EFI_SECURITY_VIOLATION;
+    else for(UINTN i=0;i<tokenlen;i++)if(buf[i]!=token[i]){rc=EFI_SECURITY_VIOLATION;break;}
+  }
+  (void)file->Close(file);
+  return rc;
+}
+/* return EFI_NOT_FOUND if auto mode is not enabled; on EFI_SUCCESS the lock
+ * has already been written and flushed, so we may try exactly one child.
+ */
+static EFI_STATUS auto_take_lock(EFI_HANDLE image){
+  EFI_FILE_PROTOCOL *root=NULL;
+  EFI_STATUS rc=usb_root(image,&root);
+  if(EFI_ERROR(rc)||!root)return rc;
+  rc=marker_exact(root,AutoEnableName,AutoEnableToken,sizeof(AutoEnableToken)-1);
+  if(rc!=EFI_SUCCESS){(void)root->Close(root);return rc;}
+  EFI_FILE_PROTOCOL *prior=NULL;
+  rc=root->Open(root,&prior,(CHAR16*)AutoPendingName,EFI_FILE_MODE_READ,0);
+  if(!EFI_ERROR(rc)){
+    if(prior)(void)prior->Close(prior);
+    (void)root->Close(root);
+    return EFI_ALREADY_STARTED; /* Previous boot not proven to return. */
+  }
+  if(rc!=EFI_NOT_FOUND){(void)root->Close(root);return rc;}
+  EFI_FILE_PROTOCOL *pending=NULL;
+  rc=root->Open(root,&pending,(CHAR16*)AutoPendingName,
+      EFI_FILE_MODE_READ|EFI_FILE_MODE_WRITE|EFI_FILE_MODE_CREATE,EFI_FILE_ARCHIVE);
+  if(EFI_ERROR(rc)||!pending){(void)root->Close(root);return rc;}
+  UINTN size=sizeof(AutoPendingToken)-1;
+  rc=pending->Write(pending,&size,(VOID*)AutoPendingToken);
+  if(!EFI_ERROR(rc)&&size!=sizeof(AutoPendingToken)-1)rc=EFI_DEVICE_ERROR;
+  if(!EFI_ERROR(rc))rc=pending->Flush(pending);
+  EFI_STATUS cr=pending->Close(pending);
+  if(!EFI_ERROR(rc)&&EFI_ERROR(cr))rc=cr;
+  (void)root->Close(root);
+  return rc; /* On error any partial lock is intentionally retained. */
+}
+static EFI_STATUS auto_clear_lock(EFI_HANDLE image){
+  EFI_FILE_PROTOCOL *root=NULL,*file=NULL;
+  EFI_STATUS rc=usb_root(image,&root);
+  if(EFI_ERROR(rc)||!root)return rc;
+  rc=root->Open(root,&file,(CHAR16*)AutoPendingName,EFI_FILE_MODE_READ|EFI_FILE_MODE_WRITE,0);
+  if(!EFI_ERROR(rc)&&file)rc=file->Delete(file);
+  (void)root->Close(root);
+  return rc;
+}
 /* Build a complete USB-device/File path. Path object is freed after LoadImage. */
 static EFI_STATUS load_usb_child(EFI_HANDLE image,EFI_HANDLE *child){
   static const CHAR16 child_path[]=L"\\EFI\\BOOT\\RTX3080-UNLOCK.EFI";
@@ -413,27 +489,64 @@ static EFI_STATUS load_usb_child(EFI_HANDLE image,EFI_HANDLE *child){
   return rc;
 }
 static void run_child_once(EFI_HANDLE image){
-  if(!LogFile){return;} /* Logging is mandatory for a GPU-modifying module. */
-  EFI_STATUS m=take_one_shot_marker(image);
-  status("stage15_marker_status=",m);
-  if(m==EFI_NOT_FOUND){out("stage15_result=SKIPPED_NOT_ARMED\n");return;}
-  if(m!=EFI_SUCCESS){out("stage15_result=FAILED_MARKER_NOT_CONSUMED\n");return;}
+  if(!LogFile)return; /* Logging mandatory before any GPU-modifying child. */
+  /* Explicit AUTO mode takes priority. It never consumes the one-shot marker. */
+  EFI_STATUS a=auto_take_lock(image);
+  status("stage15_auto_gate_status=",a);
+  BOOLEAN auto_mode=FALSE;
+  if(a==EFI_SUCCESS){
+    auto_mode=TRUE;
+    out("stage15_mode=AUTO_PERSISTENT_LOCKED\n");
+  } else if(a==EFI_NOT_FOUND){
+    EFI_STATUS m=take_one_shot_marker(image);
+    status("stage15_marker_status=",m);
+    if(m==EFI_NOT_FOUND){out("stage15_result=SKIPPED_NOT_ARMED\n");return;}
+    if(m!=EFI_SUCCESS){out("stage15_result=FAILED_MARKER_NOT_CONSUMED\n");return;}
+    out("stage15_mode=ONE_SHOT\n");
+  } else if(a==EFI_ALREADY_STARTED){
+    out("stage15_result=SKIPPED_AUTO_PENDING_PREVIOUS_ATTEMPT\n");return;
+  } else {
+    out("stage15_result=SKIPPED_AUTO_MARKER_OR_USB_ERROR\n");return;
+  }
   out("stage15_attempt=1\n");
   out("stage15_result=ATTEMPT_STARTED_NOT_YET_RETURNED\n");
   EFI_STATUS flushed=LogFile->Flush(LogFile);
-  if(EFI_ERROR(flushed)){out("stage15_result=FAILED_LOG_FLUSH\n");return;}
+  if(EFI_ERROR(flushed)){
+    out("stage15_result=FAILED_LOG_FLUSH\n");return; /* Keep auto lock. */
+  }
   EFI_HANDLE child=NULL;
   EFI_STATUS rc=load_usb_child(image,&child);
   status("stage15_child_load_status=",rc);
   if(EFI_ERROR(rc)||!child){out("stage15_result=FAILED_CHILD_LOAD\n");return;}
   flushed=LogFile->Flush(LogFile);
-  if(EFI_ERROR(flushed)){out("stage15_result=FAILED_LOG_FLUSH\n");(void)ST->BootServices->UnloadImage(child);return;}
+  if(EFI_ERROR(flushed)){
+    out("stage15_result=FAILED_LOG_FLUSH\n");
+    (void)ST->BootServices->UnloadImage(child);return;
+  }
   rc=ST->BootServices->StartImage(child,NULL,NULL);
   out("stage15_child_returned=1\n");
   status("stage15_child_startimage_return=",rc);
   (void)ST->BootServices->UnloadImage(child);
-  if(EFI_ERROR(rc))out("stage15_result=FAILED_CHILD_RETURNED\n");
-  else out("stage15_result=CHILD_RETURNED_SUCCESS_UNLOCK_UNVERIFIED\n");
+  if(EFI_ERROR(rc)){
+    out("stage15_result=FAILED_CHILD_RETURNED\n");
+    if(auto_mode)out("stage15_auto_lock=RETAINED_AFTER_CHILD_FAILURE\n");
+  } else {
+    out("stage15_result=CHILD_RETURNED_SUCCESS_UNLOCK_UNVERIFIED\n");
+    if(auto_mode){
+      /* Clear ONLY after child EFI_SUCCESS. This does not prove Windows
+       * handoff or NVIDIA driver health. USB removal is recovery on failure.
+       */
+      flushed=LogFile->Flush(LogFile);
+      if(EFI_ERROR(flushed)){
+        out("stage15_auto_lock=RETAINED_LOG_ERROR\n");
+      } else {
+        EFI_STATUS cleared=auto_clear_lock(image);
+        status("stage15_auto_lock_clear_status=",cleared);
+        if(!EFI_ERROR(cleared))out("stage15_auto=REARMED_FOR_NEXT_USB_BOOT\n");
+        else out("stage15_auto_lock=RETAINED_CLEAR_ERROR\n");
+      }
+    }
+  }
   (void)LogFile->Flush(LogFile);
 }
 EFI_STATUS EFIAPI efi_main(EFI_HANDLE image,EFI_SYSTEM_TABLE *st){

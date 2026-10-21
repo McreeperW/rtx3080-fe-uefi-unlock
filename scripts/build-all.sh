@@ -23,7 +23,7 @@ python3 - <<'PY'
 from pathlib import Path
 import hashlib
 items = [
- ('Stage15',Path('fe/stage15/out/BOOTX64.EFI'),'e322ab5332fd420af93a7f61f94502df9cefbbfffc3cfbab37aa43f718451d00'),
+ ('Stage15 AUTO (untested)',Path('fe/stage15/out/BOOTX64.EFI'),'2614d688d29f85cd4ff083d03e6abe2338e77f1851efc6fdbb88a93f867b2171'),
  ('Stage20',Path('fe/stage20/out/RTX3080-UNLOCK.EFI'),'8ef922e0804bf5b0d68f028e8af2c77b676ebfb9b0b3307b7311516e8747d4c5'),
  ('Stage21',Path('fe/stage21/out/RTX3080-STAGE19-ENGINE.EFI'),'0d578a0612fb8a59b7320a0e038d2f19b03f9573b2a995f10ed44e6e10b32373')]
 print('\n=== Build output hash comparison (observed successful PC only) ===')
@@ -33,6 +33,6 @@ for label, path, expected in items:
     status='MATCH' if actual==expected else 'DIFF / NOT TESTED'
     print(f'{label:8s} {status}\n  file={path}\n  sha256={actual}')
     all_match &= (actual == expected)
-print('\n'+('All files byte-identical to observed build. STILL NOT VERIFIED ON OTHER HARDWARE.' if all_match else 'Compilation succeeded, but one or more files differ. DO NOT assume a safe/validated USB build.'))
+print('\n'+('Outputs match packaged hashes. AUTO Stage15 is NOT GPU-TESTED (including on the original PC).' if all_match else 'Compilation succeeded, but one or more files differ. DO NOT assume a safe/validated USB build.'))
 PY
 printf '\nDONE: source build only. No USB changes or GPU operations.\n'

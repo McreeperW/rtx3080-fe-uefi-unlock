@@ -48,16 +48,25 @@ USB/
 │   ├── gsp_ga10x.bin
 │   ├── gsp_boot_ga102.bin
 │   └── gsp_boot_desc_ga102.bin
-└── RTX3080-STAGE15-ARM.ONCE        # 검증 후 1회 실행 허용
+└── RTX3080-STAGE15-ARM.ONCE        # 1회 실행 (기본)
 ```
 
-EFI 3개는 빌드 결과물, ASSETS 5개는 별도 준비. 파일 검사 후 [튜토리얼](docs/TUTORIAL_KO.md)에 따라 **1회 실행 마커**를 생성하고, PC의 **UEFI 부팅 메뉴에서 USB 선택**. 성공 시 Windows로 진입합니다.
+EFI 3개는 빌드, ASSETS 5개는 별도 준비. 파일 검사 후 USB로 부팅하면 Windows로 인계합니다.
+
+**USB 부팅마다 자동 언락 (선택):** [자동 모드 안내](docs/AUTO_USB_KO.md)
+
+```bash
+bash fe/stage15/build.sh
+bash scripts/install-auto-usb.sh /mnt/f
+```
+
+자동 모드에서는 USB 루트에 `RTX3080-STAGE15-AUTO.ON`이 유지됩니다.
 
 ## 주의
 
 - **RTX 3080 FE 단일 시스템에서만 검증.** 다른 메인보드·CPU·GPU는 미검증.
 - GPU 정지, 검은 화면, 강제 종료 위험. 실패 시 USB 제거 후 일반 부팅.
-- 언락은 영구 적용되지 않음. 현재는 1회 실행 방식.
+- 언락은 영구 적용되지 않음. 기본 1회 실행 / 실험적 USB 자동 실행 선택 가능.
 - NVIDIA 펌웨어 ASSETS와 빌드된 EFI는 저장소에 포함되지 않음.
 
 ## 라이선스
