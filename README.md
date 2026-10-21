@@ -34,7 +34,24 @@ Windows 부팅 전 GPU 설정을 변경합니다. VBIOS 플래시는 하지 않�
 bash scripts/build-all.sh
 ```
 
-USB에는 **Stage 15 부트로더, Stage 20 브리지, Stage 21 엔진**을 사용합니다. EFI 파일 배치와 검증 절차는 튜토리얼을 참고하세요.
+**USB 구성 (FAT32)**
+
+```text
+USB/
+├── EFI/BOOT/
+│   ├── BOOTX64.EFI                 # Stage 15
+│   ├── RTX3080-UNLOCK.EFI          # Stage 20
+│   └── RTX3080-STAGE19-ENGINE.EFI  # Stage 21
+├── RTX3080-UNLOCK/ASSETS/
+│   ├── booter_load_ga102.bin
+│   ├── v67-ga102-610.43.03.bin
+│   ├── gsp_ga10x.bin
+│   ├── gsp_boot_ga102.bin
+│   └── gsp_boot_desc_ga102.bin
+└── RTX3080-STAGE15-ARM.ONCE        # 검증 후 1회 실행 허용
+```
+
+EFI 3개는 빌드 결과물, ASSETS 5개는 별도 준비. 파일 검사 후 [튜토리얼](docs/TUTORIAL_KO.md)에 따라 **1회 실행 마커**를 생성하고, PC의 **UEFI 부팅 메뉴에서 USB 선택**. 성공 시 Windows로 진입합니다.
 
 ## 주의
 
