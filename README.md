@@ -2,6 +2,12 @@
 
 > **실험용 소스 / 검증 대상은 NVIDIA GeForce RTX 3080 Founders Edition 한 장입니다.** 일반 사용자용 드라이버·VBIOS 패치가 아닙니다. GPU 펌웨어 실행과 PCIe FLR로 화면 출력 및 시스템 부팅이 중단될 수 있습니다. 다른 컴퓨터에서 무작정 실행하지 마세요.
 
+## 처음 사용하는 사람: USB 튜토리얼
+
+**[처음부터 따라 하는 한글 튜토리얼 (준비물 → 빌드 → ASSETS → FAT32 USB → 부팅 → 로그·복구)](docs/TUTORIAL_KO.md)**
+
+> 공개 저장소의 소스 빌드는 실기 검증과 다릅니다. Stage21 엔진 재빌드 해시, NVIDIA ASSETS 준비, 다른 메인보드/CPU 호환성 제한을 먼저 읽으세요.
+
 ## 프로젝트 개요
 
 Windows NVIDIA 드라이버가 GPU를 초기화하기 전에 UEFI 단계에서 RTX 3080 FE의 Tensor 관련 설정을 변경하고, **NVIDIA GOP를 재연결하지 않은 채 Windows Boot Manager로 인계**하는 실험입니다. GPU VBIOS는 플래시하지 않습니다. 현재 구현은 1회 실행 마커 방식이며, 전원을 끈 뒤 언락이 영구 유지되도록 만든 것은 아닙니다.
