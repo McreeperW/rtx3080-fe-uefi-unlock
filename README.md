@@ -1,21 +1,27 @@
 # RTX 3080 FE UEFI Tensor Unlock
 
 <!-- STAGE26_BUILD_GUIDE: BEGIN -->
-## Stage 26 엔진 빌드 (현재 실험 정책)
+## Stage 21 / Stage 26: 완전히 분리된 빌드
 
-**Stage 26은 별도 엔진이 아니라 `fe/stage21/engine/`에 적용된 SS0 로깅 정책입니다.** 옛 Stage 21 빌드 안내에 적힌 엔진 파일명이 계속 사용됩니다.
+두 버전은 **각각 독립된 `engine/` 소스**를 사용합니다. Stage 21은 원래의 초기 SS0 네 값 화이트리스트를 유지하고, Stage 26은 초기 SS0를 기록만 하며 다른 GFW/PLM/WPR2/SS1 등 검사를 유지합니다.
 
 ```bash
-# WSL, 저장소 루트에서 실행; Stage26 소스가 없으면 즉시 실패합니다.
+# Stage 21: 기존 SS0 화이트리스트 정책
+bash fe/stage21/build-engine.sh
+bash fe/stage21/tests/run.sh
+
+# Stage 26: SS0 관측 전용 정책, 독립된 엔진 및 검증
 bash fe/stage26/build.sh
 ```
 
-- Stage 26 소스 확인 → EFI 빌드 → Stage 26 정책 모의 테스트 → SHA-256 출력.
-- 실제 Windows 부팅 경로의 엔진 이름: `EFI/BOOT/RTX3080-STAGE19-ENGINE.EFI` (**이름을 변경하지 마세요**).
-- 빌드 결과: `fe/stage21/out/RTX3080-STAGE19-ENGINE.EFI`, 보관용 복사본 `fe/stage26/out/RTX3080-STAGE26-ENGINE.EFI`.
-- **빌드와 테스트는 USB를 수정하지 않으며, 실기 안전성·반복 부팅 성공을 보장하지 않습니다.**
+| 버전 | 소스 | 빌드 출력 (USB 설치 아님) |
+|---|---|---|
+| Stage 21 | `fe/stage21/engine/` | `fe/stage21/out/RTX3080-STAGE19-ENGINE.EFI` |
+| Stage 26 | `fe/stage26/engine/` | `fe/stage26/out/RTX3080-STAGE19-ENGINE.EFI` 및 구별용 `RTX3080-STAGE26-ENGINE.EFI` |
 
-**[Stage 26 빌드·검증 상세 절차](docs/STAGE26_BUILD_KO.md)** · [Stage 26 실측 결과](docs/STAGE26_RESULTS_KO.md)
+**중요:** Stage 20이 USB에서 요청하는 엔진 파일명은 버전에 상관없이 `EFI/BOOT/RTX3080-STAGE19-ENGINE.EFI`입니다. 두 `out/` 폴더의 파일은 서로 덮어쓰지 않습니다. 직접 복사해 USB에 설치하거나 자동 실행 마커를 활성화하는 기능은 포함되지 않습니다. 소스 빌드 성공과 UEFI 실기 안전성은 별개입니다.
+
+[Stage 26 빌드 절차](docs/STAGE26_BUILD_KO.md) · [Stage 26 실기 결과](docs/STAGE26_RESULTS_KO.md) · [두 정책 비교](docs/STAGE21_STAGE26_COMPARISON_KO.md)
 <!-- STAGE26_BUILD_GUIDE: END -->
 
 

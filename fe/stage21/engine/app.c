@@ -576,10 +576,7 @@ static EFI_STATUS ColdCheck(VOID) {
     GuLog("STAGE21 cold detail: chip=%#x GFW_PLM=%#x GFW_BOOT=%#x GFW_CPUCTL=%#x WPR2_HI=%#x FEAT_PLM=%#x SS0=%#x SS1=%#x plm1183a4=%#x booter_fuse=%#x fwsec_fuse=%#x\n",
       s.chip,s.gfw_plm,s.gfw_boot,s.gfw_cpuctl,s.wpr2_hi,s.feature_plm,s.ss0,s.ss1,
       s.plm_1183a4,s.booter_fuse,s.fwsec_fuse);
-    GuLog("STAGE26 SS0 snapshot: phase=%s ss0_initial=%#x ss1_initial=%#x legacy_whitelist=%u environment_no_ss0_whitelist=%u mmio_fault=%u policy=OBSERVE_NOT_GATE\n",
-      Stage,s.ss0,s.ss1,(unsigned)a.known_observation,
-      (unsigned)a.environment_ok_without_ss0,(unsigned)Gu.fault);
-    return !Gu.fault && a.environment_ok_without_ss0?
+    return !Gu.fault && a.known_observation && a.gfw_idle && a.signature_slots_supported?
       EFI_SUCCESS:EFI_NOT_READY;
   }
 #endif

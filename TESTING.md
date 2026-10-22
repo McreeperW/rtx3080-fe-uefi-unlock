@@ -48,16 +48,19 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\unlock\test-all.ps1
 검사 결과는 `unlock/build/test-results.json`에 기록합니다. host/mock 통과와 실제 USB 부팅 결과는 별개입니다.
 
 
-## Stage 26 (2026-10-23 공유 결과) — 초기 SS0 로깅 정책
+## Stage 21 / Stage 26 (독립 버전) — 로컬 빌드·테스트
 
-현재 `fe/stage21/engine/`에 반영된 코드는 초기 SS0를 특정 네 값으로 제한하지 않는 Stage 26 실험판입니다. 다음 로컬 검사에는 **GPU 펌웨어 실행이 포함되지 않습니다**.
+Stage 21과 Stage 26은 각각 `fe/stage21/engine/`, `fe/stage26/engine/`에 독립적으로 보존됩니다. Stage 21은 기존 SS0 네 값 허용 목록을 사용하며, Stage 26은 SS0 초기값을 기록만 합니다.
 
 ```bash
 bash fe/stage21/build-engine.sh
-bash fe/stage21/tests/run.sh  # Stage 26 유닛/정적/PE 검사 호출
+bash fe/stage21/tests/run.sh
+bash fe/stage26/build.sh
 ```
 
-- `test_stage26_policy.c`: 미리 관찰된 화이트리스트 밖 SS0 여섯 값을 허용하되, 독립적인 10개 상태 가드와 `0xffffffff` 센티넬 거부를 확인합니다.
-- `run-stage26.sh`: 빌드된 UEFI PE 아키텍처를 점검하고 위 모의 테스트를 실행합니다.
-- 실제 USB 실험: [Stage 26 결과](docs/STAGE26_RESULTS_KO.md). 실기 테스트/Windows 성능 관측은 호스트 모의 테스트와 구별합니다.
-- 옛 Stage 21용 해시 고정 테스트는 Stage 26 빌드에 직접 사용할 수 없어 `run.sh`의 호출 대상을 바꾸었습니다. Stage 21 당시 상태는 Git 이력에 보존합니다.
+- Stage 21 테스트는 기존 네 값 화이트리스트만 허용하는지 확인합니다.
+- Stage 26 테스트는 추가 SS0 여섯 값을 화이트리스트에서 배제하지 않고 GFW/PLM/WPR2/Fuse/SS1 차단 조건이 유지되는지 확인합니다.
+- 서로 다른 출력 경로에서 PE EFI 형식과 정책을 검사합니다.
+- 이 테스트는 **호스트/모의 검증**이며 실제 GPU 실행, USB 설치, 반복 부팅 안정성 검증이 아닙니다.
+
+자세한 내용: [Stage 26 빌드](docs/STAGE26_BUILD_KO.md), [Stage 26 실기 결과](docs/STAGE26_RESULTS_KO.md).

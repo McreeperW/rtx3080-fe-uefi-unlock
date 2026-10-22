@@ -1,15 +1,22 @@
 # 소스 빌드, 검증 바이너리 및 USB 취급 주의
 
 <!-- STAGE26_BUILD_GUIDE: BEGIN -->
-## Stage 26 (현재) 빌드 안내
+## Stage 21과 Stage 26의 독립 빌드
 
-이 문서의 기존 SHA-256 및 Stage 21 설치 스크립트 설명은 **과거 Stage 21 검증 파일**을 기준으로 합니다. 현재 Stage 26 SS0 기록 전용 정책을 빌드·검증하려면 다음 명령과 [Stage 26 빌드 가이드](STAGE26_BUILD_KO.md)를 사용하세요.
+현재 소스에서 **Stage 21은 기존 SS0 화이트리스트**(`fe/stage21/engine`), **Stage 26은 SS0 기록 전용 정책**(`fe/stage26/engine`)으로 분리돼 있습니다.
 
 ```bash
+bash fe/stage21/build-engine.sh
+bash fe/stage21/tests/run.sh
 bash fe/stage26/build.sh
 ```
 
-실제 엔진 파일명은 Stage 20 호출 호환성 때문에 `fe/stage21/out/RTX3080-STAGE19-ENGINE.EFI`로 유지됩니다. 새 빌드 파일의 해시는 이전 Stage 21 값과 다를 수 있으며, 과거 `install-once.sh`로 임의 설치하지 마세요.
+- Stage 21 EFI: `fe/stage21/out/RTX3080-STAGE19-ENGINE.EFI`
+- Stage 26 EFI: `fe/stage26/out/RTX3080-STAGE19-ENGINE.EFI` (브리지 호환), `fe/stage26/out/RTX3080-STAGE26-ENGINE.EFI` (보관용)
+- 기존 SHA-256 표는 **예전 실기 파일 식별 기록**이고 새 빌드 해시와 같을 필요는 없습니다. Stage21 `install-once.sh`는 과거 특정 해시를 전제로 하므로 생성한 파일로 즉시 설치하지 마세요.
+- 여기서는 USB·부팅 마커·GitHub를 수정하지 않습니다.
+
+[Stage 26 상세 빌드](STAGE26_BUILD_KO.md) · [Stage 21/26 정책 비교](STAGE21_STAGE26_COMPARISON_KO.md)
 <!-- STAGE26_BUILD_GUIDE: END -->
 
 ## 소스만 공개하는 이유
@@ -22,7 +29,7 @@ bash fe/stage26/build.sh
 
 - WSL2 Linux (Clang, LLD `lld-link`, GCC/CC, Python 3, GNU coreutils, `file`)
 - 포함된 `deps/edk2/MdePkg/Include` (BSD-2-Clause-Patent) 및 GPU 포트 소스
-- `bash fe/stage15/build.sh`, `bash fe/stage20/build.sh`, `bash fe/stage21/build-engine.sh`
+- `bash fe/stage15/build.sh`, `bash fe/stage20/build.sh`, `bash fe/stage21/build-engine.sh`, `bash fe/stage26/build.sh`
 - 결과는 각각 `fe/stage15/out/BOOTX64.EFI`, `fe/stage20/out/RTX3080-UNLOCK.EFI`, `fe/stage21/out/RTX3080-STAGE19-ENGINE.EFI`. 컴파일해도 **정확한 하드웨어 안전성을 보장하지 않음**.
 
 ### 빌드 재현성에서 확인된 차이
