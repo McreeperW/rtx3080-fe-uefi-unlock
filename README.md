@@ -1,5 +1,24 @@
 # RTX 3080 FE UEFI Tensor Unlock
 
+<!-- STAGE26_BUILD_GUIDE: BEGIN -->
+## Stage 26 엔진 빌드 (현재 실험 정책)
+
+**Stage 26은 별도 엔진이 아니라 `fe/stage21/engine/`에 적용된 SS0 로깅 정책입니다.** 옛 Stage 21 빌드 안내에 적힌 엔진 파일명이 계속 사용됩니다.
+
+```bash
+# WSL, 저장소 루트에서 실행; Stage26 소스가 없으면 즉시 실패합니다.
+bash fe/stage26/build.sh
+```
+
+- Stage 26 소스 확인 → EFI 빌드 → Stage 26 정책 모의 테스트 → SHA-256 출력.
+- 실제 Windows 부팅 경로의 엔진 이름: `EFI/BOOT/RTX3080-STAGE19-ENGINE.EFI` (**이름을 변경하지 마세요**).
+- 빌드 결과: `fe/stage21/out/RTX3080-STAGE19-ENGINE.EFI`, 보관용 복사본 `fe/stage26/out/RTX3080-STAGE26-ENGINE.EFI`.
+- **빌드와 테스트는 USB를 수정하지 않으며, 실기 안전성·반복 부팅 성공을 보장하지 않습니다.**
+
+**[Stage 26 빌드·검증 상세 절차](docs/STAGE26_BUILD_KO.md)** · [Stage 26 실측 결과](docs/STAGE26_RESULTS_KO.md)
+<!-- STAGE26_BUILD_GUIDE: END -->
+
+
 RTX 3080 Founders Edition용 **실험적 UEFI Tensor 언락**.
 Windows 부팅 전 GPU 설정을 변경합니다. VBIOS 플래시는 하지 않습니다.
 

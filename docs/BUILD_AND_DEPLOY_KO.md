@@ -1,5 +1,17 @@
 # 소스 빌드, 검증 바이너리 및 USB 취급 주의
 
+<!-- STAGE26_BUILD_GUIDE: BEGIN -->
+## Stage 26 (현재) 빌드 안내
+
+이 문서의 기존 SHA-256 및 Stage 21 설치 스크립트 설명은 **과거 Stage 21 검증 파일**을 기준으로 합니다. 현재 Stage 26 SS0 기록 전용 정책을 빌드·검증하려면 다음 명령과 [Stage 26 빌드 가이드](STAGE26_BUILD_KO.md)를 사용하세요.
+
+```bash
+bash fe/stage26/build.sh
+```
+
+실제 엔진 파일명은 Stage 20 호출 호환성 때문에 `fe/stage21/out/RTX3080-STAGE19-ENGINE.EFI`로 유지됩니다. 새 빌드 파일의 해시는 이전 Stage 21 값과 다를 수 있으며, 과거 `install-once.sh`로 임의 설치하지 마세요.
+<!-- STAGE26_BUILD_GUIDE: END -->
+
 ## 소스만 공개하는 이유
 
 펌웨어 파일 5개를 어디에 배치하고 어떤 해시로 검증하는지는 [ASSETS 준비·검증 가이드](ASSETS_GUIDE_KO.md)에 별도로 정리했습니다. **자산 확보/추출의 완전 자동화는 아직 제공하지 않습니다.**
