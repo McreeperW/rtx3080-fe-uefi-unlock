@@ -1,0 +1,12 @@
+# User-shared PowerShell-filtered Stage26 engine output. Not the complete original report.
+STAGE26 SS0 snapshot: phase=cold-state ss0_initial=0x50340010 ss1_initial=0x7 legacy_whitelist=0 environment_no_ss0_whitelist=1 mmio_fault=0 policy=OBSERVE_NOT_GATE
+CHECK stage=cold-state status=0
+CHECK stage=prom status=0
+CHECK stage=assets status=0
+CHECK stage=arming status=0
+CHECK stage=armed-config status=0
+CHECK stage=armed-display status=0
+STAGE26 SS0 snapshot: phase=armed-cold-state ss0_initial=0x50340010 ss1_initial=0x7 legacy_whitelist=0 environment_no_ss0_whitelist=1 mmio_fault=0 policy=OBSERVE_NOT_GATE
+CHECK stage=armed-cold-state status=0
+transaction result=0 containment=0 started=1 quiesced=1 fault=0 retained=0 maps=0 FLR=1
+FINAL status=0 stage=transaction attempted=1 driver_release=0 clean=1

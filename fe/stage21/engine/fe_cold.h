@@ -18,19 +18,27 @@ typedef struct {
   BOOLEAN gfw_idle;
   BOOLEAN signature_slots_supported;
   BOOLEAN differs_from_msi;
+  BOOLEAN environment_ok_without_ss0;
 } GU_FE_COLD_ASSESSMENT;
 
 static inline GU_FE_COLD_ASSESSMENT GuFeAssessCold(const GU_FE_COLD_SAMPLE *s) {
-  GU_FE_COLD_ASSESSMENT a={FALSE,FALSE,FALSE,FALSE};
+  GU_FE_COLD_ASSESSMENT a={FALSE,FALSE,FALSE,FALSE,FALSE};
   if (!s) return a;
   /* Distinguish a real halted GSP state from disconnected 0xffffffff reads. */
   a.gfw_idle=s->gfw_plm==0x8b8fU && s->gfw_boot==0x3ffU && s->gfw_cpuctl==0x10U;
   a.signature_slots_supported=s->booter_fuse==1U && s->fwsec_fuse==3U;
   a.differs_from_msi=s->ss0!=0x46254040U || (s->ss1!=2U && s->ss1!=3U);
-  a.known_observation=s->chip==0xb72000a1U && a.gfw_idle &&
+  /* Stage26: independent safety/environment guard. SS0 is NOT a value allowlist.
+   * Reject the all-ones MMIO disconnect/error sentinel, without interpreting
+   * any specific non-sentinel speed selector as safe or unsafe.
+   * This is experimental and does not establish FWSEC/FLR safety. */
+  a.environment_ok_without_ss0=s->chip==0xb72000a1U && a.gfw_idle &&
     s->wpr2_hi==0U && s->feature_plm==0xffffff8fU &&
-    (s->ss0==0x10240014U || s->ss0==0x10241014U || s->ss0==0x10341014U ||
-     s->ss0==0x10140014U) &&
+    s->ss0!=0xffffffffU &&
     s->ss1==7U && s->plm_1183a4==0x2800U && a.signature_slots_supported;
+  /* Legacy whitelist retained exclusively for diagnostic correlation. */
+  a.known_observation=a.environment_ok_without_ss0 &&
+    (s->ss0==0x10240014U || s->ss0==0x10241014U ||
+     s->ss0==0x10341014U || s->ss0==0x10140014U);
   return a;
 }

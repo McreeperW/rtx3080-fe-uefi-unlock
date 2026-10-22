@@ -1,6 +1,6 @@
-# RTX 3080 FE 수정 프로파일 — 검증된 실측값과 코드 위치
+# RTX 3080 FE 수정 프로파일 — Stage 21 및 Stage 26
 
-이 문서는 **2026-10-22 Stage 21 성공 실험의 프로파일**을 정리합니다. 원본 `rtx3080-unlock-public-main`의 MSI GPU 대상 포트를 NVIDIA RTX 3080 FE 전용으로 실험적으로 확장한 코드입니다. 모든 숫자는 **다른 메인보드에서도 같은 값을 써도 된다는 뜻이 아닙니다.**
+이 문서는 **2026-10-22 Stage 21 성공 실험의 프로파일**과 **2026-10-23 공유된 Stage 26 실기 결과**를 구분해 정리합니다. 원본 `rtx3080-unlock-public-main`의 MSI GPU 대상 포트를 NVIDIA RTX 3080 FE 전용으로 실험적으로 확장한 코드입니다. 모든 숫자는 **다른 메인보드에서도 같은 값을 써도 된다는 뜻이 아닙니다.**
 
 ## 1. 장치 식별 / PCI
 
@@ -28,7 +28,7 @@
 
 코드: `fe/stage20/src/bridge.c`, `fe/stage15/src/bootbridge.c`.
 
-## 3. 콜드 상태 판단 (Stage 21 변경 핵심)
+## 3. 콜드 상태 판단 (Stage 21의 과거 기준 / Stage 26의 현재 실험 정책)
 
 코드: `fe/stage21/engine/fe_cold.h`, `fe/stage21/engine/app.c`.
 
@@ -36,19 +36,21 @@
 - `GFW_PLM == 0x8b8f`, `GFW_BOOT == 0x3ff`, `GFW_CPUCTL == 0x10`.
 - `WPR2_HI == 0`.
 - `FEAT_PLM == 0xffffff8f`.
-- 허용 SS0 (콜드 초기 상태): `0x10240014`, `0x10241014`, `0x10341014`, **추가 `0x10140014`**.
+- Stage 21 과거 허용 SS0: `0x10240014`, `0x10241014`, `0x10341014`, `0x10140014`. **Stage 26에서 이 목록은 기록·비교용일 뿐 실행 허가 조건이 아닙니다.**
 - 콜드 초기 SS1: `0x7`.
 - `plm_1183a4 == 0x2800`.
 - `booter_fuse == 0x1`, `fwsec_fuse == 0x3`.
 - `gfw_idle`, `signature_slots_supported` 등 기존 게이트 유지.
 
-**주의:** `0x10140014` 추가는 다른 필드가 **모두 동일하게 관측되었을 때만** 허용하는 수정입니다. 다른 값까지 광범위하게 추가하거나 `ColdCheck`를 무력화하지 마세요. 로그의 `STAGE21 cold detail`로 전체 입력을 기록합니다.
+**Stage 26 현재 실험 정책:** `fe_cold.h`의 `environment_ok_without_ss0`에서 초기 SS0의 전체값 화이트리스트를 제거했습니다. `SS0=0xffffffff`는 MMIO 오류 센티넬로 거부하며, Chip/GFW/WPR2/FEAT_PLM/SS1/0x1183a4/Fuse 등 나머지 조건을 유지합니다. `app.c`는 `STAGE26 SS0 snapshot`으로 원본값과 `legacy_whitelist` 통계값을 모두 남깁니다.
+
+**실측:** `0x50340010`에서도 `stage20_selector_verify=1` 및 Windows FP16/BF16 성능 증가를 확인했습니다. 이는 **한 번의 성공 사례**일 뿐, 임의 SS0에서 실행하는 것이 안전함을 보장하지 않습니다. 세부 근거는 [Stage 26 결과](STAGE26_RESULTS_KO.md)를 참고하세요.
 
 ## 4. 실제 언락 레지스터 / 검증 기준
 
 | 항목 | 기존 관측 | 언락 트랜잭션 후 |
 |---|---|---|
-| SS0 (`0x0082381C`) | `0x10140014` 또는 실험에 따라 다른 허용 초기값 | **`0x88888888`** |
+| SS0 (`0x0082381C`) | `0x10140014`(Stage 21), `0x50340010`(Stage 26 실측) | **`0x88888888`** |
 | SS1 (`0x00823820`) | `0x00000007` | **`0x00000008`** |
 | FEAT PLM (`0x00823804`) | `0xffffff8f` | 언락 펌웨어 경로의 별도 검증 대상 |
 | PCIe FLR | 실행 전 유휴 상태 | `result=0`, BAR 재접근·드라이버 응답 점검 |
@@ -73,7 +75,7 @@ Stage12 성공 때 사용한 NVIDIA 610.43.03 계열 자산과 정확히 동일�
 
 - `fe/stage21/engine/profiles.h`: FE(`0x146710de`)를 `GU_PROFILE_FE_OBSERVED`로 식별. 파일 주석의 초기 설명은 기존 프로파일이 FE 언락을 차단하던 시점의 기록입니다. **승인 조건은 이 파일 하나가 아니라** Stage20 브리지, `app.c`, `checks.c`, `port.c` 등의 가드 전체에 흩어져 있습니다.
 - `fe/stage21/engine/app.c`: GPU 장치 BDF와 PCI/GOP 상태를 확인한 뒤 인터랙티브 입력 없이 트랜잭션 진입. 기존 보드 프로파일만 보고 승인하지 않음.
-- `fe/stage21/engine/fe_cold.h`: Stage21 콜드 SS0 허용값 `0x10140014` 추가.
+- `fe/stage21/engine/fe_cold.h`: Stage 21 과거 허용값과 Stage 26 현재 기록 전용 정책을 구분해 구현.
 - `fe/stage20/src/bridge.c`: 대상 RTX 3080 FE의 PCI BDF, 드라이버 점유 구조 검증 → 분리 → MMIO 활성 → 엔진 호출 → **엔진 실행 후 GOP 재연결 생략**.
 - `fe/stage15/src/bootbridge.c`: Windows 선적재, 한 번만 실행되는 마커 소비 및 실패 반환 기록.
 

@@ -82,3 +82,31 @@ bash scripts/install-auto-usb.sh /mnt/f
 ## 라이선스
 
 GPL-2.0-only. 원저작물 고지: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+## Stage 26 — SS0 화이트리스트 제외 실기 검증
+
+RTX 3080 FE (10DE:2206)에서 초기 SS0=0x50340010,
+SS1=0x7 상태로 UEFI 언락에 성공했습니다.
+
+기존 Stage 21의 초기 SS0 전체값 화이트리스트는
+Stage 26에서 측정·기록 전용으로 변경했습니다.
+기존 GPU 식별, GFW, WPR2, PLM, Fuse 및
+펌웨어 자산 검사는 유지합니다.
+
+언락 후 SS0=0x88888888, SS1=0x8,
+Stage 20 selector_verify=1, 엔진 transaction result=0,
+FLR=1을 확인했습니다.
+
+| 연산 | 이전 | 이후 | 변화 |
+|---|---:|---:|---:|
+| FP32 IEEE | 22.965 | 23.684 TFLOPS | +3.13% |
+| FP16 Tensor | 62.924 | 116.156 TFLOPS | +84.60% |
+| BF16 Tensor | 62.939 | 117.016 TFLOPS | +85.92% |
+
+행렬 크기 4096, 각 30개 표본입니다.
+
+이 결과는 단일 실기 성공 사례입니다. 반복 콜드부팅
+성공률과 장시간 안정성은 아직 검증되지 않았습니다.
+FP32 증가만으로 FP32 언락을 주장하지 않습니다.
+
+[Stage 26 상세 검증 결과](docs/STAGE26_RESULTS_KO.md)

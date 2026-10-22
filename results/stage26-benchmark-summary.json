@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "experiment": "Stage 26 — log-only initial SS0, no whole-value allowlist",
+  "result_reported_date": "2026-10-23",
+  "execution_date": "not independently established",
+  "gpu": "NVIDIA RTX 3080 Founders Edition 10GB",
+  "pci_id": "10de:2206",
+  "subsystem_id": "10de:1467",
+  "cpu": "AMD Ryzen 5 3600",
+  "csmon": false,
+  "workload": "4096x4096 GEMM",
+  "samples_per_precision": 30,
+  "command": "py .\\benchmark.py --label after",
+  "units": "TFLOPS",
+  "initial_ss0": "0x50340010",
+  "initial_ss1": "0x00000007",
+  "final_ss0": "0x88888888",
+  "final_ss1": "0x00000008",
+  "uefi_engine_return": "EFI_SUCCESS (0)",
+  "stage20_selector_verify": true,
+  "windows_benchmark_completed": true,
+  "results": [
+    {
+      "precision": "fp32_ieee",
+      "before": 22.965,
+      "after": 23.684,
+      "percent_change_displayed": 3.13
+    },
+    {
+      "precision": "fp16_tensor",
+      "before": 62.924,
+      "after": 116.156,
+      "percent_change_displayed": 84.6
+    },
+    {
+      "precision": "bf16_tensor",
+      "before": 62.939,
+      "after": 117.016,
+      "percent_change_displayed": 85.92
+    }
+  ],
+  "source": {
+    "uefi_stage20_log_name": "RTX3080-STAGE20-UNLOCK(2).TXT",
+    "uefi_stage20_log_sha256": "6fb2e5d9558f45d292e1610e163f1fc3996803975f6a5cced9717660360b2132",
+    "engine_summary": "User-pasted PowerShell excerpts; complete Stage26 engine report not independently uploaded in this turn",
+    "benchmark": "User-pasted benchmark.py output; raw RTX3080-after.json was not attached"
+  },
+  "limits": [
+    "One successful hardware run; repeat cold starts not tested",
+    "Driver/version/thermal equivalence for runs not independently rechecked",
+    "No validated FP32 hardware unlock claim",
+    "No VBIOS modification; transient UEFI effect, not persistent across reboots"
+  ]
+}
